@@ -67,11 +67,47 @@ RELEASE_TARBALL := mako-pkg-$(STAMP).tar.bz2
 RELSTAGEDIR          := /tmp/$(STAMP)
 
 #
+# Tools
+#
+CTFCONVERT :=	$(ROOT)/tmp/ctftools/bin/ctfconvert
+
+#
 # v8plus uses the CTF tools as part of its build, but they can safely be
 # overridden here so that this works in dev zones without them.
 # See marlin.git Makefile.
 #
 NPM_ENV          = MAKE_OVERRIDES="CTFCONVERT=/bin/true CTFMERGE=/bin/true"
+
+#
+# We need to build some C software, and to make it debuggable we should
+# include CTF information.  Download the CTF tools:
+#
+STAMP_CTF :=		tmp/ctftools/.stamp
+$(STAMP_CTF):
+	rm -rf tmp/ctftools
+	./tools/download_ctftools
+	touch $@
+
+CLEAN_FILES += tmp/ctftools tmp/ctftools.*.tar.gz
+
+MAKOFIND_OBJS =	makofind.o
+
+MAKOFIND_CFLAGS =	-gdwarf-2 -m32 -std=c99 -D__EXTENSIONS__ \
+			-Wall -Wextra -Werror \
+			-Wno-unused-parameter \
+			-Isrc/
+
+MAKOFIND_OBJDIR =	tmp/makofind.obj
+
+CLEAN_FILES +=		tmp/makofind.obj makofind
+
+makofind: $(MAKOFIND_OBJS:%=$(MAKOFIND_OBJDIR)/%) | $(STAMP_CTF)
+	gcc -o $@ $^ $(MAKOFIND_CFLAGS)
+	$(CTFCONVERT) -l $@ $@
+
+$(MAKOFIND_OBJDIR)/%.o: src/%.c
+	@mkdir -p $(@D)
+	gcc -o $@ -c $(MAKOFIND_CFLAGS) $<
 
 #
 # Repo-specific targets
@@ -115,7 +151,7 @@ clean::
 	-(cd deps/nginx && $(MAKE) clean)
 
 .PHONY: release
-release: all deps docs $(SMF_MANIFESTS) check-nginx
+release: all deps docs $(SMF_MANIFESTS) check-nginx makofind
 	@echo "Building $(RELEASE_TARBALL)"
 	@mkdir -p $(RELSTAGEDIR)/root/opt/smartdc/mako
 	@mkdir -p $(RELSTAGEDIR)/root/opt/smartdc/boot
@@ -131,6 +167,7 @@ release: all deps docs $(SMF_MANIFESTS) check-nginx
 	    $(ROOT)/smf \
 	    $(RELSTAGEDIR)/root/opt/smartdc/mako/
 	cp -r $(ROOT)/build/scripts $(RELSTAGEDIR)/root/opt/smartdc/mako/boot
+	cp $(ROOT)/makofind $(RELSTAGEDIR)/root/opt/smartdc/mako
 	ln -s /opt/smartdc/mako/boot/setup.sh \
 	    $(RELSTAGEDIR)/root/opt/smartdc/boot/setup.sh
 	chmod 755 $(RELSTAGEDIR)/root/opt/smartdc/mako/boot/setup.sh

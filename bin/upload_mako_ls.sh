@@ -36,6 +36,7 @@ PID_FILE=/tmp/upload_mako_ls.pid
 TMP_DIR=/var/tmp/mako_dir
 LISTING_FILE=$TMP_DIR/$MANTA_STORAGE_ID
 MANTA_DIR=/mako
+MAKO_DIR=/opt/smartdc/mako
 START_TIME=`date -u +"%Y-%m-%dT%H:%M:%SZ"` # Time that this script started.
 
 
@@ -121,7 +122,7 @@ mkdir -p $TMP_DIR
 
 # %p is filename, %s is *logical* size in *bytes*, %T@ is last modified time,
 # %unix time, %k is the *physical* size in *kilobytes*
-find /manta -type f -printf '%p\t%s\t%T@\t%k\n' >$LISTING_FILE
+$MAKO_DIR/makofind /manta >$LISTING_FILE
 
 log "Going to upload $LISTING_FILE to $MANTA_DIR/$MANTA_STORAGE_ID"
 manta_put_directory $MANTA_DIR
