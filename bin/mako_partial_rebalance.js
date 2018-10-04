@@ -201,7 +201,7 @@ function pushObject(_, cb) {
  * want to work with, but we take any negative integer as meaning "all".
  */
 //var mantaObjectsLimit = process.argv[2];
-var mantaObjectsLimit;
+var mantaObjectsLimit = 1;
 if (!mantaObjectsLimit || mantaObjectsLimit < 0) {
         mantaObjectsLimit = -1;
 } else {
