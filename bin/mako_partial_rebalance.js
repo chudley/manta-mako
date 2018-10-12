@@ -35,6 +35,17 @@ var LOG = bunyan.createLogger({
 });
 
 function checkForMantaObjects(_, cb) {
+        if (_.rebalaceObjects) {
+                /*
+                 * We already have a set of objects to work on.
+                 */
+                LOG.info({
+                    objects: _.rebalaceObjects
+                }, 'user supplied manta object');
+
+                cb();
+                return;
+        }
         lib_rebalance.mantaClient.ftw(_.rebalacePath, { type: 'o' },
             function (err, res) {
                 if (err) {
@@ -212,8 +223,15 @@ assert.number(mantaObjectsLimit);
 var opts = {
     'rebalanceFunc': rebalance,
     'rebalacePath': null,
-    'mantaObjectsLimit': mantaObjectsLimit
+    'mantaObjectsLimit': mantaObjectsLimit,
+    'rebalaceObjects': null
 };
+
+if (process.env['REBALANCE_OBJECT']) {
+        opts.rebalaceObjects = [ {
+            'name': process.env['REBALANCE_OBJECT']
+        } ];
+}
 
 vasync.pipeline({
         funcs: [
